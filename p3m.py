@@ -171,19 +171,11 @@ def sort_images(files, path):
             save_image(image.get_path(), os.path.join(path, determine_image_name(image)))
     else:
         for image in files:
-            # determine image path by naming scheme
-            folder_name = sorting_scheme.replace("YEAR", image.get_year())
-            folder_name = folder_name.replace("MONTH", image.get_month())
-            folder_name = folder_name.replace("DAY", image.get_day())
-            folder_name = folder_name.replace("HOUR", image.get_hour())
-            folder_name = folder_name.replace("MINUTE", image.get_minute())
-            folder_name = folder_name.replace("SECOND", image.get_second())
-
             # create folder recursively
-            os.makedirs(os.path.join(path, folder_name), exist_ok=True)
+            os.makedirs(os.path.join(path, determine_folder_name(image)), exist_ok=True)
 
             # move or copy the image
-            save_image(image.get_path(), os.path.join(path, folder_name, determine_image_name(image)))
+            save_image(image.get_path(), os.path.join(path, determine_folder_name(image), determine_image_name(image)))
 
 
 def save_image(source, destination):
@@ -194,6 +186,18 @@ def save_image(source, destination):
     else:
         shutil.copy(source, destination)
         image_move_count += 1
+
+
+def determine_folder_name(image):
+    # determine image path by naming scheme
+    folder_name = sorting_scheme.replace("YEAR", image.get_year())
+    folder_name = folder_name.replace("MONTH", image.get_month())
+    folder_name = folder_name.replace("DAY", image.get_day())
+    folder_name = folder_name.replace("HOUR", image.get_hour())
+    folder_name = folder_name.replace("MINUTE", image.get_minute())
+    folder_name = folder_name.replace("SECOND", image.get_second())
+
+    return folder_name
 
 
 def preview_folder_name():
