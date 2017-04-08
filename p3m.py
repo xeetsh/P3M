@@ -165,17 +165,10 @@ image_move_count = 0
 
 
 def sort_images(files, path):
-
-    global image_move_count
-
     if sorting_scheme == "":
         # just move or copy the image without creating any folders
-        if move:
-            os.rename(image.get_path(), os.path.join(path, determine_image_name(image)))
-            image_move_count += 1
-        else:
-            shutil.copy(image.get_path(), os.path.join(path, determine_image_name(image)))
-            image_move_count += 1
+        for image in files:
+            save_image(image.get_path(), os.path.join(path, determine_image_name(image)))
     else:
         for image in files:
             # determine image path by naming scheme
@@ -190,12 +183,17 @@ def sort_images(files, path):
             os.makedirs(os.path.join(path, folder_name), exist_ok=True)
 
             # move or copy the image
-            if move:
-                os.rename(image.get_path(), os.path.join(path, folder_name, determine_image_name(image)))
-                image_move_count += 1
-            else:
-                shutil.copy(image.get_path(), os.path.join(path, folder_name, determine_image_name(image)))
-                image_move_count += 1
+            save_image(image.get_path(), os.path.join(path, folder_name, determine_image_name(image)))
+
+
+def save_image(source, destination):
+    global image_move_count
+    if move:
+        os.rename(source, destination)
+        image_move_count += 1
+    else:
+        shutil.copy(source, destination)
+        image_move_count += 1
 
 
 def preview_folder_name():
