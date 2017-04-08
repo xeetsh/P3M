@@ -156,6 +156,7 @@ move = False
 backup = False
 confirmation = True
 overrite_backup = False
+overrite = False
 source = ""
 destination = ""
 backup_destination = ""
@@ -166,16 +167,27 @@ image_move_count = 0
 
 def sort_images(files, path):
     if sorting_scheme == "":
-        # just move or copy the image without creating any folders
+
+        # if a name allready exists inkrement i until there is a file name that doesnt exist
         for image in files:
-            save_image(image.get_path(), os.path.join(path, determine_image_name(image)))
+            i = 0
+            while os.path.isfile(os.path.join(path, determine_image_name(image, i))):
+                i += 1
+
+            # just move or copy the image without creating any folders
+            save_image(image.get_path(), os.path.join(path, determine_image_name(image, i)))
     else:
         for image in files:
             # create folder recursively
             os.makedirs(os.path.join(path, determine_folder_name(image)), exist_ok=True)
 
+            # if a name allready exists inkrement i until there is a file name that doesnt exist
+            i = 0
+            while os.path.isfile(os.path.join(path, determine_image_name(image, i))):
+                i += 1
+
             # move or copy the image
-            save_image(image.get_path(), os.path.join(path, determine_folder_name(image), determine_image_name(image)))
+            save_image(image.get_path(), os.path.join(path, determine_folder_name(image), determine_image_name(image, i)))
 
 
 def save_image(source, destination):
@@ -212,10 +224,13 @@ def preview_folder_name():
     return temp_name
 
 
-def determine_image_name(image):
+def determine_image_name(image, number):
 
     if naming_scheme == "":
-        return os.path.split(image.get_path())[1]
+        if number == 0:
+            return(os.path.split(image.get_path())[1].split(".")[0] + image.get_filetype())
+        else:
+            return(os.path.split(image.get_path())[1].split(".")[0] + "(" + str(number) + ")" + image.get_filetype())
     else:
         temp_name = naming_scheme.replace("YEAR", image.get_year())
         temp_name = temp_name.replace("MONTH", image.get_month())
@@ -224,7 +239,10 @@ def determine_image_name(image):
         temp_name = temp_name.replace("MINUTE", image.get_minute())
         temp_name = temp_name.replace("SECOND", image.get_second())
 
-        return temp_name + image.get_filetype()
+        if number == 0:
+            return temp_name + image.get_filetype()
+        else:
+            return temp_name + "(" + str(number) + ")" + image.get_filetype()
 
 
 def preview_image_name():
