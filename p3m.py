@@ -286,25 +286,34 @@ def perform_backup(src_path, dst_path, overrite):
 # prints out a summary of the settings the user has set and asks for confirmation if not otherwise specified (-x)
 def summarize():
     sys.stdout.write("[ INFO ] Images will be ")
+
     if move:
         sys.stdout.write(bcolors.WARNING + "moved" + bcolors.ENDC)
     else:
         sys.stdout.write(bcolors.WARNING + "copied" + bcolors.ENDC)
+
     sys.stdout.write(" from " + bcolors.WARNING + source + bcolors.ENDC)
+
     if recursive:
         sys.stdout.write(bcolors.WARNING + " INCLUDING SUBFOLDERS" + bcolors.ENDC)
+
     sys.stdout.write(" to " + bcolors.WARNING + destination + bcolors.ENDC + "!\n")
     sys.stdout.flush()
+
     if naming_scheme != "":
         sys.stdout.write("[ INFO ] The images will be named like this: " + bcolors.WARNING + preview_image_name() + bcolors.ENDC + "\n")
+
     if sorting_scheme != "":
         sys.stdout.write("[ INFO ] The folder structure in the destination folder will look like this: " + bcolors.WARNING + preview_folder_name() + bcolors.ENDC + "\n")
+
     if backup:
         sys.stdout.write("[ INFO ] A backup will be created at: " + bcolors.WARNING + os.path.join(backup_destination, "Backup") + bcolors.ENDC + "\n")
     elif move:
         sys.stdout.write(bcolors.WARNING + "[ WARNING ] No backup will be created!" + bcolors.ENDC + "\n")
+
     if overrite_backup:
         sys.stdout.write(bcolors.WARNING + "[ WARNING ] The old backup folder will be overritten!" + bcolors.ENDC + "\n")
+
     sys.stdout.flush()
 
     if confirmation:
@@ -330,34 +339,34 @@ def setup():
     global sorting_scheme
 
     for index, argument in enumerate(sys.argv):
-        if "--naming" in argument or "-n" in argument:
+        if argument == "--naming" or argument == "-n":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -n or --naming must be followed by the naming scheme!" + bcolors.ENDC)
                 sys.exit()
             else:
-                if not "--help" in sys.argv[index + 1] and not "-h" in sys.argv[index + 1]:
+                if not sys.argv[index + 1] == "--help" and not sys.argv[index + 1] == "-h":
                     naming_scheme = sys.argv[index + 1]
                 else:
                     print(naming_help)
                     sys.exit()
-        if "--sorting" in argument or "-s" in argument:
+        if argument == "--sorting" or argument == "-s":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -s or --sorting must be followed by the sorting scheme!" + bcolors.ENDC)
                 sys.exit()
             else:
-                if not "--help" in sys.argv[index + 1] and not "-h" in sys.argv[index + 1]:
+                if not sys.argv[index + 1] == "--help" and not sys.argv[index + 1] == "-h":
                     sorting_scheme = sys.argv[index + 1]
                 else:
                     print(sorting_help)
                     sys.exit()
-        if "--help" in argument or "-h" in argument:
+        if argument == "--help" or argument == "-h":
             print(help_text)
             sys.exit()
-        if "--recursive" in argument or "-r" in argument:
+        if argument == "--recursive" or argument == "-r":
             recursive = True
-        if "--move" in argument or "-m" in argument:
+        if argument == "--move" or argument == "-m":
             move = True
-        if "--source" in argument or "-src" in argument:
+        if argument == "--source" or argument == "-src":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -src or --source must be followed by a path!" + bcolors.ENDC)
                 sys.exit()
@@ -366,7 +375,7 @@ def setup():
             else:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -src or --source must be followed by a path! " + bcolors.ENDC + sys.argv[index + 1] + bcolors.FAIL + " is not a path! " + bcolors.ENDC)
                 sys.exit()
-        if "--destination" in argument or "-dst" in argument:
+        if argument == "--destination" or argument == "-dst":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -dst or --destination must be followed by a path!" + bcolors.ENDC)
                 sys.exit()
@@ -375,7 +384,7 @@ def setup():
             else:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -dst or --destination must be followed by a path! " + bcolors.ENDC + sys.argv[index + 1] + bcolors.FAIL + " is not a path! " + bcolors.ENDC)
                 sys.exit()
-        if "--backup" in argument or "-b" in argument:
+        if argument == "--backup" or argument == "-b":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -b or --backup must be followed by a path!" + bcolors.ENDC)
                 sys.exit()
@@ -388,9 +397,9 @@ def setup():
             elif os.path.isdir(sys.argv[index + 1]):
                 backup_destination = sys.argv[index + 1]
                 backup = True
-        if "-xB" in argument:
+        if argument == "-xB":
             overrite_backup = True
-        if "-xC" in argument:
+        if argument == "-xC":
             confirmation = False
 
     # check if a source and a destination is given
