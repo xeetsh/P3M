@@ -127,6 +127,7 @@ help_text = '''Usage: p3m -src <UNSORTED IMAGES> -dst <PATH TO SORT IMAGES TO> [
     -s      --sorting                   Set a folder sorting scheme. Usage: -s [SORTING SCHEME]. Use -s -h for further information.
     -xC                                 Don't ask for confirmation befor starting.
     -xB                                 Overrite old backup if there is one.
+    -xO                                 Overrite files with duplicate names.
 '''
 
 naming_help = '''Usage Naming Scheme: -n \"[VALUE][SEPERATOR][VALUE]\"
@@ -167,12 +168,12 @@ image_move_count = 0
 
 def sort_images(files, path):
     if sorting_scheme == "":
-
-        # if a name allready exists inkrement i until there is a file name that doesnt exist
+        # if a name allready exists inkrement i until there is a file name that doesnt exist unless the user wishes to overrite files with duplicate names
         for image in files:
             i = 0
-            while os.path.isfile(os.path.join(path, determine_image_name(image, i))):
-                i += 1
+            if overrite == False:
+                while os.path.isfile(os.path.join(path, determine_image_name(image, i))):
+                    i += 1
 
             # just move or copy the image without creating any folders
             save_image(image.get_path(), os.path.join(path, determine_image_name(image, i)))
@@ -181,10 +182,11 @@ def sort_images(files, path):
             # create folder recursively
             os.makedirs(os.path.join(path, determine_folder_name(image)), exist_ok=True)
 
-            # if a name allready exists inkrement i until there is a file name that doesnt exist
+            # if a name allready exists inkrement i until there is a file name that doesnt exist unless the user wishes to overrite files with duplicate names
             i = 0
-            while os.path.isfile(os.path.join(path, determine_image_name(image, i))):
-                i += 1
+            if overrite == False:
+                while os.path.isfile(os.path.join(path, determine_image_name(image, i))):
+                    i += 1
 
             # move or copy the image
             save_image(image.get_path(), os.path.join(path, determine_folder_name(image), determine_image_name(image, i)))
@@ -336,6 +338,9 @@ def summarize():
     if overrite_backup:
         sys.stdout.write(bcolors.WARNING + "[ WARNING ] The old backup folder will be overritten!" + bcolors.ENDC + "\n")
 
+    if overrite:
+        sys.stdout.write(bcolors.WARNING + "[ WARNING ] Files with duplicate names will be overritten" + bcolors.ENDC + "\n")
+
     sys.stdout.flush()
 
     if confirmation:
@@ -359,6 +364,7 @@ def setup():
     global confirmation
     global naming_scheme
     global sorting_scheme
+    global overrite
 
     for index, argument in enumerate(sys.argv):
         if argument == "--naming" or argument == "-n":
@@ -423,6 +429,8 @@ def setup():
             overrite_backup = True
         if argument == "-xC":
             confirmation = False
+        if argument == "-xO":
+            overrite = True
 
     # check if a source and a destination is given
     if source == "" or destination == "":
