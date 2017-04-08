@@ -124,20 +124,31 @@ help_text = '''Usage: p3m -src <UNSORTED IMAGES> -dst <PATH TO SORT IMAGES TO> [
     -m      --move                      Moves the images instead of copying them (Think abouth backing up your images before with -b [DESTINATION]).
     -b      --backup                    Backs your images up your images before moving them. Usage: -b [DESTINATION].
     -n      --naming                    Set the naming of the images. Usage: -n [NAMING SCHEME]. Use -n -h for furhter information.
+    -s      --sorting                   Set a folder sorting scheme. Usage: -s [SORTING SCHEME]. Use -s -h for further information.
     -xC                                 Don't ask for confirmation befor starting.
     -xB                                 Overrite old backup if there is one.
 '''
 
 naming_help = '''Usage Naming Scheme: -n \"[VALUE][SEPERATOR][VALUE]\"
-Values can be: YEAR, MONTH, DAY, HOUR, MINUTE, second
-Seperators can be any character except characters that confuse your os (/ , . , ~ , *)
+Values can be: YEAR, MONTH, DAY, HOUR, MINUTE, SECOND
+Seperators can be any character or string except characters that confuse your os (/ , . , ~ , *)
 
-Examples:                               Result:
-YEAR_MONTH_DAY_HOUR_MINUTE_SECOND       2012_21_12_13_37_00.JPG
-DAY_MONTH_YEAR-HOUR:MINUTE:SECOND       12_21_2012-13:37:00.JPG
+Examples:                                   Result:
+YEAR_MONTH_DAY_HOUR_MINUTE_SECOND           2012_21_12_13_37_00.JPG
+image_DAY_MONTH_YEAR-HOUR:MINUTE:SECOND     image_12_21_2012-13:37:00.JPG
 
 Keep in mind that the second example will result in your pictures not being arranged in the right order (sorted by recording date)
 if viewed in a file browser that sorts them by name.
+'''
+
+sorting_help = '''Usage Sorting Scheme: -s \"[VALUE]/[VALUE]\"
+Values can be: YEAR, MONTH, DAY, HOUR, MINUTE, SECOND or any string
+Seperate your folders with a / like you would normally do
+The first folder of your naming sceme will be located in the folder you specified as destination
+
+Examples:                               Result:
+YEAR/MONTH                              2012/12/image.JPG
+images/YEAR/MONTH/DAY                   images/2012/12/21/image.JPG
 '''
 
 recursive = False
@@ -149,31 +160,54 @@ source = ""
 destination = ""
 backup_destination = ""
 naming_scheme = ""
-
-folder_creation_count = 0
+sorting_scheme = ""
 image_move_count = 0
 
 
 def sort_images(files, path):
-    global folder_creation_count
+
     global image_move_count
 
-    for image in files:
-        if not os.path.isdir(path + "/" + image.get_year()):
-            os.mkdir(path + "/" + image.get_year())
-            folder_creation_count += 1
-
-        if not os.path.isdir(path + "/" + image.get_year() + "/" + image.get_month()):
-            os.mkdir(path + "/" + image.get_year() + "/" + image.get_month())
-            folder_creation_count += 1
-
-        # move the image
+    if sorting_scheme == "":
+        # just move or copy the image without creating any folders
         if move:
-            os.rename(image.get_path(), path + "/" + image.get_year() + "/" + image.get_month() + "/" + determine_image_name(image))
+            os.rename(image.get_path(), os.path.join(path, determine_image_name(image)))
             image_move_count += 1
         else:
-            shutil.copy(image.get_path(), path + "/" + image.get_year() + "/" + image.get_month() + "/" + determine_image_name(image))
+            shutil.copy(image.get_path(), os.path.join(path, determine_image_name(image)))
             image_move_count += 1
+    else:
+        for image in files:
+            # determine image path by naming scheme
+            folder_name = sorting_scheme.replace("YEAR", image.get_year())
+            folder_name = folder_name.replace("MONTH", image.get_month())
+            folder_name = folder_name.replace("DAY", image.get_day())
+            folder_name = folder_name.replace("HOUR", image.get_hour())
+            folder_name = folder_name.replace("MINUTE", image.get_minute())
+            folder_name = folder_name.replace("SECOND", image.get_second())
+
+            # create folder recursively
+            os.makedirs(os.path.join(path, folder_name), exist_ok=True)
+
+            # move or copy the image
+            if move:
+                os.rename(image.get_path(), os.path.join(path, folder_name, determine_image_name(image)))
+                image_move_count += 1
+            else:
+                shutil.copy(image.get_path(), os.path.join(path, folder_name, determine_image_name(image)))
+                image_move_count += 1
+
+
+def preview_folder_name():
+
+    temp_name = sorting_scheme.replace("YEAR", "2012")
+    temp_name = temp_name.replace("MONTH", "21")
+    temp_name = temp_name.replace("DAY", "12")
+    temp_name = temp_name.replace("HOUR", "13")
+    temp_name = temp_name.replace("MINUTE", "37")
+    temp_name = temp_name.replace("SECOND", "00")
+
+    return temp_name
 
 
 def determine_image_name(image):
@@ -265,6 +299,8 @@ def summarize():
     sys.stdout.flush()
     if naming_scheme != "":
         sys.stdout.write("[ INFO ] The images will be named like this: " + bcolors.WARNING + preview_image_name() + bcolors.ENDC + "\n")
+    if sorting_scheme != "":
+        sys.stdout.write("[ INFO ] The folder structure in the destination folder will look like this: " + bcolors.WARNING + preview_folder_name() + bcolors.ENDC + "\n")
     if backup:
         sys.stdout.write("[ INFO ] A backup will be created at: " + bcolors.WARNING + os.path.join(backup_destination, "Backup") + bcolors.ENDC + "\n")
     elif move:
@@ -293,6 +329,7 @@ def setup():
     global overrite_backup
     global confirmation
     global naming_scheme
+    global sorting_scheme
 
     for index, argument in enumerate(sys.argv):
         if "--naming" in argument or "-n" in argument:
@@ -304,6 +341,16 @@ def setup():
                     naming_scheme = sys.argv[index + 1]
                 else:
                     print(naming_help)
+                    sys.exit()
+        if "--sorting" in argument or "-s" in argument:
+            if len(sys.argv) == index + 1:
+                print(bcolors.FAIL + "[ SYNTAX ERROR ] -s or --sorting must be followed by the sorting scheme!" + bcolors.ENDC)
+                sys.exit()
+            else:
+                if not "--help" in sys.argv[index + 1] and not "-h" in sys.argv[index + 1]:
+                    sorting_scheme = sys.argv[index + 1]
+                else:
+                    print(sorting_help)
                     sys.exit()
         if "--help" in argument or "-h" in argument:
             print(help_text)
