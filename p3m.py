@@ -335,7 +335,7 @@ def summarize():
     elif move:
         sys.stdout.write(bcolors.WARNING + "[ WARNING ] No backup will be created!" + bcolors.ENDC + "\n")
 
-    if overrite_backup:
+    if overrite_backup and backup:
         sys.stdout.write(bcolors.WARNING + "[ WARNING ] The old backup folder will be overritten!" + bcolors.ENDC + "\n")
 
     if overrite:
