@@ -84,7 +84,7 @@ class Image:
 
             return image
 
-        except KeyError, ValueError:
+        except (KeyError, ValueError):
             print(bcolors.WARNING + "[ WARNING ] " + "Could not retrieve exif information for: " + bcolors.ENDC + os.path.split(path)[1])
             return False
 
