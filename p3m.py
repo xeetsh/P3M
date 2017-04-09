@@ -217,8 +217,8 @@ def determine_folder_name(image):
 def preview_folder_name():
 
     temp_name = sorting_scheme.replace("YEAR", "2012")
-    temp_name = temp_name.replace("MONTH", "21")
-    temp_name = temp_name.replace("DAY", "12")
+    temp_name = temp_name.replace("MONTH", "12")
+    temp_name = temp_name.replace("DAY", "21")
     temp_name = temp_name.replace("HOUR", "13")
     temp_name = temp_name.replace("MINUTE", "37")
     temp_name = temp_name.replace("SECOND", "00")
