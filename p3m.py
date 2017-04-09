@@ -84,7 +84,7 @@ class Image:
 
             return image
 
-        except KeyError:
+        except KeyError, ValueError:
             print(bcolors.WARNING + "[ WARNING ] " + "Could not retrieve exif information for: " + bcolors.ENDC + os.path.split(path)[1])
             return False
 
@@ -267,11 +267,11 @@ def scan_folder(path):
             image = Image.create_image(os.path.join(path, filename))
             if image != False:
                 file_list.append(image)
-        elif os.path.isdir(filename) and not recursive:
+        elif os.path.isdir(os.path.join(path, filename)) and not recursive:
             print(bcolors.WARNING + "[ WARNING ] " + bcolors.ENDC + filename + bcolors.WARNING + " is a directory! Use -r to also sort subfolders. " + bcolors.ENDC)
-        elif os.path.isdir(filename) and recursive and os.path.abspath(os.path.join(path, filename)) != os.path.abspath(destination):
+        elif os.path.isdir(os.path.join(path, filename)) and recursive and os.path.join(path, filename) != os.path.abspath(destination):
             scan_folder(os.path.join(path, filename))
-        elif os.path.isdir(filename) and recursive and os.path.abspath(os.path.join(path, filename)) == os.path.abspath(destination):
+        elif os.path.isdir(os.path.abspath(destination)) and recursive and os.path.join(path, filename) == os.path.abspath(destination):
             print(bcolors.WARNING + "[ WARNING ] Skipped " + bcolors.ENDC + filename + bcolors.WARNING + " because it's the destination folder! " + bcolors.ENDC)
         else:
             print(bcolors.WARNING + "[ WARNING ] " + "Unsupported filetype " + filename[filename.find("."):len(filename)] + " for: " + bcolors.ENDC + filename)
