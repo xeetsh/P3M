@@ -1,4 +1,4 @@
-# dependencys    exifread(ARCH-Linux AUR)
+# dependencys    python-piexif(ARCH-Linux AUR)
 #               python-pymediainfo(ARCH-Linux AUR)
 
 import sys
