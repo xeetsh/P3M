@@ -5,7 +5,11 @@ import sys
 import piexif
 import shutil
 from pymediainfo import MediaInfo
+from datetime import datetime
 import os
+import platform
+
+print(piexif.__file__)
 
 
 class bcolors:
@@ -42,6 +46,7 @@ class Image:
     def toString(self):
         return self.__path + " " + self.__year + "-" + self.__month + "-" + self.__day + " " + self.__hour + ":" + self.__minute + ":" + self.__second + " " + self.__filetype
 
+
     # only creates an Image if there is exif information
     # returnes false if no image is created
     @staticmethod
@@ -63,9 +68,24 @@ class Image:
                         second = date_time[21:23]
 
                         # if there is no metadata in the video file the tagged_date is UTC 1904-01-01 00:00:00
-                        if year == "1904":
+                        if year == "1904" and use_creation_date == False:
                             print(bcolors.WARNING + "[ WARNING ] " + "Could not retrieve metadata information for: " + bcolors.ENDC + os.path.split(path)[1])
+
+                            if handle_nodate:
+                                move_or_copy_nodate(path)
+                            
                             return False
+                        
+                        # FALLBACK
+                        elif year == "1904" and use_creation_date:
+                            date_time = get_time_from_creation_date(path)
+                            year = date_time[0:4]
+                            month = date_time[5:7]
+                            day = date_time[8:10]
+                            hour = date_time[11:13]
+                            minute = date_time[14:16]
+                            second = date_time[17:19]
+
 
             elif filetype == ".jpg" or filetype == ".JPG" or filetype == ".jpeg" or filetype == ".JPEG":
                 # get exif information
@@ -79,18 +99,69 @@ class Image:
                 minute = date_time[14:16]
                 second = date_time[17:19]
 
-            image = Image(year, month, day, hour, minute, second, path,
-                          filetype)
+            # FALLBACK
+            elif use_creation_date:
+                date_time = get_time_from_creation_date(path)
+                year = date_time[0:4]
+                month = date_time[5:7]
+                day = date_time[8:10]
+                hour = date_time[11:13]
+                minute = date_time[14:16]
+                second = date_time[17:19]
+
+            else:
+                return False
+
+
+            image = Image(year, month, day, hour, minute, second, path, filetype)
 
             return image
 
         except (KeyError, ValueError):
             print(bcolors.WARNING + "[ WARNING ] " + "Could not retrieve exif information for: " + bcolors.ENDC + os.path.split(path)[1])
+            
+            # FALLBACK
+            if use_creation_date:
+                date_time = get_time_from_creation_date(path)
+                year = date_time[0:4]
+                month = date_time[5:7]
+                day = date_time[8:10]
+                hour = date_time[11:13]
+                minute = date_time[14:16]
+                second = date_time[17:19]
+
+                image = Image(year, month, day, hour, minute, second, path, filetype)
+
+                return image
+
+            if handle_nodate:
+                move_or_copy_nodate(path)
+
             return False
 
         except TypeError:
             print(bcolors.WARNING + "[ WARNING ] " + "Could not retrieve metadata information for: " + bcolors.ENDC + os.path.split(path)[1])
+
+            # FALLBACK
+            if use_creation_date:
+                date_time = get_time_from_creation_date(path)
+                year = date_time[0:4]
+                month = date_time[5:7]
+                day = date_time[8:10]
+                hour = date_time[11:13]
+                minute = date_time[14:16]
+                second = date_time[17:19]
+
+                image = Image(year, month, day, hour, minute, second, path, filetype)
+
+                return image
+
+            if handle_nodate:
+                move_or_copy_nodate(path)
+
             return False
+
+
 
     def get_year(self):
         return self.__year
@@ -125,6 +196,9 @@ help_text = '''Usage: p3m -src <UNSORTED IMAGES> -dst <PATH TO SORT IMAGES TO> [
     -b      --backup                    Backs your images up your images before moving them. Usage: -b [DESTINATION].
     -n      --naming                    Set the naming of the images. Usage: -n [NAMING SCHEME]. Use -n -h for furhter information.
     -s      --sorting                   Set a folder sorting scheme. Usage: -s [SORTING SCHEME]. Use -s -h for further information.
+    -a      --handleNodate              Moves or copies pictures that could not be sorted to a seperate folder named /NoDate/
+    -c      --useCreationDate           Uses the creation date and time of a file as fallback if metainfo won't provide any information
+    -v      --verbose                   Tells you everything that happens
     -xC                                 Don't ask for confirmation befor starting.
     -xB                                 Overrite old backup if there is one.
     -xO                                 Overrite files with duplicate names.
@@ -164,7 +238,35 @@ backup_destination = ""
 naming_scheme = ""
 sorting_scheme = ""
 image_move_count = 0
+handle_nodate = False
+verbose = False
+use_creation_date = False
 
+
+# fallback if no metadata is found
+# determine the date by the files creation date
+
+def get_time_from_creation_date(path):
+    # Get the creation date of the file
+    # credits: Mark Amery and igacia @ https://stackoverflow.com/questions/237079/how-to-get-file-creation-modification-date-times-in-python
+    time = 0
+
+    # Windows ?!
+    if platform.system() == 'Windows':
+        time = os.path.getctime(path)
+    else:
+        stat = os.stat(path)
+        try:
+            time = stat.st_birthtime
+        except AttributeError:
+            # Linux?!
+            time = stat.st_mtime
+    
+    return datetime.utcfromtimestamp(time).strftime('%Y-%m-%d %H:%M:%S')
+
+def move_or_copy_nodate(image):
+    os.makedirs(os.path.join(destination, "NoDate"), exist_ok=True)
+    save_image(image, os.path.join(destination, "NoDate", image.split("/")[len(image.split("/")) - 1]))
 
 def sort_images(files, path):
     if sorting_scheme == "":
@@ -185,7 +287,7 @@ def sort_images(files, path):
             # if a name allready exists inkrement i until there is a file name that doesnt exist unless the user wishes to overrite files with duplicate names
             i = 0
             if overrite == False:
-                while os.path.isfile(os.path.join(path, determine_image_name(image, i))):
+                while os.path.isfile(os.path.join(path, determine_folder_name(image), determine_image_name(image, i))):
                     i += 1
 
             # move or copy the image
@@ -197,9 +299,11 @@ def save_image(source, destination):
     if move:
         os.rename(source, destination)
         image_move_count += 1
+        print("[ INFO ] Moved file from: " + bcolors.WARNING + source + bcolors.ENDC + " to " + bcolors.WARNING + destination + bcolors.ENDC)
     else:
         shutil.copy(source, destination)
         image_move_count += 1
+        print("[ INFO ] Copied file from: " + bcolors.WARNING + source + bcolors.ENDC + " to " + bcolors.WARNING + destination + bcolors.ENDC)
 
 
 def determine_folder_name(image):
@@ -250,8 +354,8 @@ def determine_image_name(image, number):
 def preview_image_name():
 
     temp_name = naming_scheme.replace("YEAR", "2012")
-    temp_name = temp_name.replace("MONTH", "21")
-    temp_name = temp_name.replace("DAY", "12")
+    temp_name = temp_name.replace("MONTH", "12")
+    temp_name = temp_name.replace("DAY", "21")
     temp_name = temp_name.replace("HOUR", "13")
     temp_name = temp_name.replace("MINUTE", "37")
     temp_name = temp_name.replace("SECOND", "00")
@@ -273,8 +377,15 @@ def scan_folder(path):
             scan_folder(os.path.join(path, filename))
         elif os.path.isdir(os.path.abspath(destination)) and recursive and os.path.join(path, filename) == os.path.abspath(destination):
             print(bcolors.WARNING + "[ WARNING ] Skipped " + bcolors.ENDC + filename + bcolors.WARNING + " because it's the destination folder! " + bcolors.ENDC)
+        elif use_creation_date:
+            image = Image.create_image(os.path.join(path, filename))
+            if image != False:
+                file_list.append(image)
         else:
             print(bcolors.WARNING + "[ WARNING ] " + "Unsupported filetype " + filename[filename.find("."):len(filename)] + " for: " + bcolors.ENDC + filename)
+            
+            if handle_nodate:
+                move_or_copy_nodate(os.path.join(path, filename))
 
 
 def perform_backup(src_path, dst_path, overrite):
@@ -330,6 +441,19 @@ def summarize():
     if sorting_scheme != "":
         sys.stdout.write("[ INFO ] The folder structure in the destination folder will look like this: " + bcolors.WARNING + preview_folder_name() + bcolors.ENDC + "\n")
 
+    if use_creation_date:
+        sys.stdout.write("[ INFO ] The creation date of a file will be used as fallback if the metadata contains no information" + "\n")
+
+    if handle_nodate:
+        sys.stdout.write("[ INFO ] Images with a non determinable date will be ")
+        if move:
+            sys.stdout.write(bcolors.WARNING + "moved" + bcolors.ENDC)
+        else:
+            sys.stdout.write(bcolors.WARNING + "copied" + bcolors.ENDC)
+        sys.stdout.write(" to " + bcolors.WARNING + os.path.join(destination, "NoDate") + bcolors.ENDC + "\n")
+    else:
+        sys.stdout.write("[ INFO ] Images with a non determinable date will not be touched!" + "\n")
+
     if backup:
         sys.stdout.write("[ INFO ] A backup will be created at: " + bcolors.WARNING + os.path.join(backup_destination, "Backup") + bcolors.ENDC + "\n")
     elif move:
@@ -365,8 +489,18 @@ def setup():
     global naming_scheme
     global sorting_scheme
     global overrite
+    global handle_nodate
+    global verbose
+    global use_creation_date
+
+    skipnextargument = False
 
     for index, argument in enumerate(sys.argv):
+        # skip this argument because it is s sub argument
+        if skipnextargument:
+            skipnextargument = False
+            continue
+
         if argument == "--naming" or argument == "-n":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -n or --naming must be followed by the naming scheme!" + bcolors.ENDC)
@@ -374,45 +508,49 @@ def setup():
             else:
                 if not sys.argv[index + 1] == "--help" and not sys.argv[index + 1] == "-h":
                     naming_scheme = sys.argv[index + 1]
+                    skipnextargument = True
                 else:
                     print(naming_help)
                     sys.exit()
-        if argument == "--sorting" or argument == "-s":
+        elif argument == "--sorting" or argument == "-s":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -s or --sorting must be followed by the sorting scheme!" + bcolors.ENDC)
                 sys.exit()
             else:
                 if not sys.argv[index + 1] == "--help" and not sys.argv[index + 1] == "-h":
                     sorting_scheme = sys.argv[index + 1]
+                    skipnextargument = True
                 else:
                     print(sorting_help)
                     sys.exit()
-        if argument == "--help" or argument == "-h":
+        elif argument == "--help" or argument == "-h":
             print(help_text)
             sys.exit()
-        if argument == "--recursive" or argument == "-r":
+        elif argument == "--recursive" or argument == "-r":
             recursive = True
-        if argument == "--move" or argument == "-m":
+        elif argument == "--move" or argument == "-m":
             move = True
-        if argument == "--source" or argument == "-src":
+        elif argument == "--source" or argument == "-src":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -src or --source must be followed by a path!" + bcolors.ENDC)
                 sys.exit()
             elif os.path.isdir(sys.argv[index + 1]):
                 source = sys.argv[index + 1]
+                skipnextargument = True
             else:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -src or --source must be followed by a path! " + bcolors.ENDC + sys.argv[index + 1] + bcolors.FAIL + " is not a path! " + bcolors.ENDC)
                 sys.exit()
-        if argument == "--destination" or argument == "-dst":
+        elif argument == "--destination" or argument == "-dst":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -dst or --destination must be followed by a path!" + bcolors.ENDC)
                 sys.exit()
             elif os.path.isdir(sys.argv[index + 1]):
                 destination = sys.argv[index + 1]
+                skipnextargument = True
             else:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -dst or --destination must be followed by a path! " + bcolors.ENDC + sys.argv[index + 1] + bcolors.FAIL + " is not a path! " + bcolors.ENDC)
                 sys.exit()
-        if argument == "--backup" or argument == "-b":
+        elif argument == "--backup" or argument == "-b":
             if len(sys.argv) == index + 1:
                 print(bcolors.FAIL + "[ SYNTAX ERROR ] -b or --backup must be followed by a path!" + bcolors.ENDC)
                 sys.exit()
@@ -425,12 +563,23 @@ def setup():
             elif os.path.isdir(sys.argv[index + 1]):
                 backup_destination = sys.argv[index + 1]
                 backup = True
-        if argument == "-xB":
+                skipnextargument = True
+        elif argument == "-v"  or argument == "--verbose":
+            verbose == True
+        elif argument == "-a" or argument == "--handleNodate":
+            handle_nodate = True
+        elif argument == "-c" or argument == "--useCreationDate":
+            use_creation_date = True
+        elif argument == "-xB":
             overrite_backup = True
-        if argument == "-xC":
+        elif argument == "-xC":
             confirmation = False
-        if argument == "-xO":
+        elif argument == "-xO":
             overrite = True
+        elif argument != sys.argv[0]:
+            print(bcolors.FAIL + "[ ERROR ] Unknown argument: " + argument + "!" + bcolors.ENDC)
+            sys.exit()
+        
 
     # check if a source and a destination is given
     if source == "" or destination == "":
