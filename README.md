@@ -3,7 +3,7 @@
 ##### I have dumped all my photos in one folder for years and want to sort them by date!?! 
 ##### This is what you were searching for!
 
-P3M is a script that allows you to sort and rename huge ammounts of files like images or videos by date. It is able to sort images (jpg/jpeg) depeding on their exif information and videos (mp4, mov) depending on their metadata. If a file has no metadata information it is also able to sort it by it's creation date.
+P3M is a script that allows you to sort and rename huge ammounts of files like images or videos by date. It is able to sort images (jpg/jpeg) depeding on their exif information and videos (mp4, mov) depending on their metadata. If a file has no metadata information it is also able to sort it by it's creation date which enables it to basically sort every type of file.
 
 To ensure nothing will happen to your precious memories P3M supports not only moving your images but also copying them or even backuping your files.
 
